@@ -45,7 +45,7 @@ class throttle(object):
 running = []
 
 hostname = socket.gethostname()
-c = docker.Client()
+c = docker.DockerClient()
 
 def publish(containername, ip):
     cmd = ['avahi-publish', '--no-reverse', '-a', containername, ip]
@@ -76,15 +76,14 @@ def register_avahi():
     print("Registering on Avahi...")
     global c
     kill_avahis()
-    containers = c.containers()
+    containers = c.containers.list()
     for cont in containers:
-        info = c.inspect_container(cont['Id'])
         hostnames = (
-            hostname + '_' + info['Name'][1:]+'.local',
-            info['Name'][1:] + '.' + hostname + '.local',
+            hostname + '_' + cont.attrs['Name'][1:]+'.local',
+            cont.attrs['Name'][1:] + '.' + hostname + '.local',
         )
-        ips = [info['NetworkSettings']['IPAddress']]
-        ip6 = info['NetworkSettings']['GlobalIPv6Address']
+        ips = [cont.attrs['NetworkSettings']['IPAddress']]
+        ip6 = cont.attrs['NetworkSettings']['GlobalIPv6Address']
         if ip6:
             ips.append(ip6)
         for containername, ip in itertools.product(hostnames, ips):
@@ -92,8 +91,7 @@ def register_avahi():
 
 def list_avahi():
     for cont in c.containers():
-        info = c.inspect_container(cont['Id'])
-        host = info['Name'][1:]
+        host = cont.attrs['Name'][1:]
         print("http://"+hostname+"_"+host+".local/")
         print("http://"+host+"."+hostname+".local/")
 
